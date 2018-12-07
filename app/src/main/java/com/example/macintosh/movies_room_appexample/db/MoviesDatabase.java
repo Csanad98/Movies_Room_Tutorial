@@ -26,9 +26,14 @@ methods for getting DAOs. In our case it’s movieDao() and directorDao().
 
  */
 
+import android.arch.persistence.db.SupportSQLiteDatabase;
 import android.arch.persistence.room.Database;
+import android.arch.persistence.room.Room;
 import android.arch.persistence.room.RoomDatabase;
 import android.content.Context;
+import android.support.annotation.NonNull;
+import android.util.Log;
+import android.os.AsyncTask;
 
 @Database(entities = {Movie.class, Director.class}, version = 1)
 public abstract class MoviesDatabase extends RoomDatabase {
@@ -39,7 +44,25 @@ public abstract class MoviesDatabase extends RoomDatabase {
     public static MoviesDatabase getDatabase(final Context context) {
 
         if(INSTANCE == null) {
-            
+            synchronized (MoviesDatabase.class) {
+                if(INSTANCE == null) {
+                    INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
+                            MoviesDatabase.class,
+                            DB_NAME)
+                            .allowMainThreadQueries()
+                            .addCallback(new RoomDatabase.Callback() {
+                                @Override
+                                public void onCreate(@NonNull SupportSQLiteDatabase db) {
+                                    super.onCreate(db);
+                                    Log.d("MoviesDatabase", "populating with data...");
+                                    new PopulateDbAsync(INSTANCE).execute();
+
+                                }
+                            })
+
+                            .build();
+                }
+            }
         }
 
 
